@@ -1,3 +1,58 @@
-# gmeet-unmirror
+<div align="center">
 
-Hides the Google Meet presentation tile so full-screen sharing doesn't produce an infinite hall of mirrors.
+![Firefox](https://img.shields.io/badge/Firefox-FF7139?style=flat-square&logo=firefoxbrowser&logoColor=white)
+![Manifest V3](https://img.shields.io/badge/Manifest-V3-4a6cf7?style=flat-square)
+![MIT](https://img.shields.io/badge/licence-MIT-22C55E?style=flat-square)
+
+**Hides the Google Meet presentation tile so full-screen sharing doesn't produce an infinite hall of mirrors.**
+
+<a href="https://kud.io/projects/webext-gmeet-unmirror">Website</a> · <a href="https://kud.io/projects/webext-gmeet-unmirror/docs">Documentation</a>
+
+</div>
+
+## Features
+
+- **Hall-of-mirrors fix** — when you share your whole screen on a Meet call, the presentation tile is hidden so it stops feeding back into itself
+- **One-click toggle** — a floating button on the Meet page hides or reveals the presentation tile on demand
+- **`Alt+Shift+H` shortcut** — toggle without reaching for the mouse; it stays inert while typing in chat or any input field
+- **Auto-hide on share** — detects when a shared screen is dominating the call and hides the tile itself, no click needed
+- **Manual override wins** — bring the tile back and it stays visible for the rest of that presentation, even with auto-hide on
+- **Nothing else touched** — the participant grid and your own self-view thumbnail are never hidden, only the mirrored copy of your own screen
+
+## Install
+
+**[gmeet-unmirror on addons.mozilla.org](https://addons.mozilla.org/firefox/addon/gmeet-unmirror/)**
+
+## Usage
+
+Once installed, open any Google Meet call and share your whole screen as usual:
+
+1. A **Hide presentation** button appears bottom-right on the page — click it, or press **Alt+Shift+H**, to hide the presentation tile and replace it with a small placeholder.
+2. Press the shortcut (or click the button, now reading **Show presentation**) again to bring it back.
+3. With auto-hide, gmeet-unmirror hides the tile itself as soon as a shared screen dominates the call — no click required. Overriding it manually keeps your choice in effect until the presentation ends.
+
+The extension only ever touches the presentation tile: the participant grid and your self-view stay exactly as they are.
+
+## Development
+
+```sh
+git clone https://github.com/kud/webext-gmeet-unmirror.git
+cd webext-gmeet-unmirror
+npm install
+npm run dev
+```
+
+`npm run dev` runs `web-ext run --firefox=nightly`, which launches Firefox Nightly with the extension already loaded and reloads it on every save to `src/content.js`.
+
+To load it by hand instead, open `about:debugging#/runtime/this-firefox` in Firefox, click **Load Temporary Add-on**, and select `manifest.json`.
+
+Other scripts:
+
+```sh
+npm run lint    # web-ext lint
+npm run build   # bundle into web-ext-artifacts/
+```
+
+The extension has a single host permission, `*://meet.google.com/*`, no background worker, and makes no network requests of its own — everything runs in the content script injected into the Meet tab.
+
+📚 **Full documentation → [webext-gmeet-unmirror/docs](https://kud.io/projects/webext-gmeet-unmirror/docs)**
