@@ -1,0 +1,27 @@
+{
+  "name": "webext-gmeet-unmirror",
+  "version": "0.1.0",
+  "description": "Hides the Google Meet presentation tile so full-screen sharing doesn't produce an infinite hall of mirrors.",
+  "private": true,
+  "author": "kud",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "web-ext run --firefox=nightly",
+    "build": "rm -rf web-ext-artifacts/* 2>/dev/null || true && web-ext build --source-dir=. --artifacts-dir=web-ext-artifacts --ignore-files=publish.sh",
+    "lint": "web-ext lint --ignore-files=publish.sh",
+    "version": "sed -E -i 's/^(\\s*\"version\":\\s*)\"[^\"]*\"/\\1\"'\"$npm_package_version\"'\"/' manifest.json && git add manifest.json",
+    "sign:listed": "WEB_EXT_API_KEY=$MOZILLA_ADDONS_JWT_ISSUER WEB_EXT_API_SECRET=$MOZILLA_ADDONS_JWT_SECRET web-ext sign --channel=listed --upload-source-code --ignore-files=publish.sh",
+    "sign:self": "WEB_EXT_API_KEY=$MOZILLA_ADDONS_JWT_ISSUER WEB_EXT_API_SECRET=$MOZILLA_ADDONS_JWT_SECRET web-ext sign --channel=unlisted --ignore-files=publish.sh",
+    "publish": "bash publish.sh",
+    "mz:browse": "open 'https://addons.mozilla.org/developers/addon/gmeet-unmirror@kud.io/'",
+    "mz:listing": "open 'https://addons.mozilla.org/firefox/addon/gmeet-unmirror/'",
+    "mz:hub": "open 'https://addons.mozilla.org/developers/'"
+  },
+  "devDependencies": {
+    "web-ext": "10.4.0"
+  }
+}
