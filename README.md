@@ -21,7 +21,24 @@
 
 ## Install
 
-**[gmeet-unmirror on addons.mozilla.org](https://addons.mozilla.org/firefox/addon/gmeet-unmirror/)**
+Two ways in — pick whichever suits you:
+
+### From Firefox Add-ons (remote)
+
+**[gmeet-unmirror on addons.mozilla.org](https://addons.mozilla.org/firefox/addon/gmeet-unmirror/)** — one click, and Firefox keeps it updated. _(The listing goes live once the add-on clears AMO review.)_
+
+### From source (local)
+
+Build it from this repo and load it into Firefox yourself:
+
+```sh
+git clone https://github.com/kud/webext-gmeet-unmirror.git
+cd webext-gmeet-unmirror
+npm install
+npm run build   # → web-ext-artifacts/gmeet-unmirror-<version>.zip
+```
+
+Then open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select `manifest.json` (or the built zip). Firefox removes temporary add-ons on restart, so this is the quick local route; for a permanent unsigned install you'd need Firefox Developer Edition or Nightly with signature enforcement off.
 
 ## Usage
 
@@ -44,7 +61,7 @@ npm run dev
 
 `npm run dev` runs `web-ext run --firefox=nightly`, which launches Firefox Nightly with the extension already loaded and reloads it on every save to `src/content.js`.
 
-To load it by hand instead, open `about:debugging#/runtime/this-firefox` in Firefox, click **Load Temporary Add-on**, and select `manifest.json`.
+(For a one-off manual load without the dev server, see **[Install → From source](#from-source-local)** above.)
 
 Other scripts:
 
