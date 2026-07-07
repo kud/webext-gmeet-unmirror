@@ -6,13 +6,18 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "gmeet-unmirror@kud.io",
-      "strict_min_version": "128.0",
+      "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": ["none"]
       }
     }
   },
+  "permissions": ["storage"],
   "host_permissions": ["*://meet.google.com/*"],
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "gmeet-unmirror"
+  },
   "content_scripts": [
     {
       "matches": ["*://meet.google.com/*"],

@@ -3,32 +3,47 @@
 //
 // CORRECTNESS BAR: only ever hide the presentation feed, and only while YOU are
 // actively screen-sharing. Never a camera tile, never your self-view, never
-// Meet's controls. The share gate is what guarantees it — the extension stays
-// inert unless a screen-share is live, so it structurally cannot grab a face
-// when nobody is presenting.
+// Meet's controls.
 //
-// Two cooperating scripts:
-//   - src/share-hook.js (MAIN world) patches getDisplayMedia and announces share
-//     start/stop on a window CustomEvent.
-//   - this script (isolated world) listens for that, and only then finds the
-//     presentation tile (the spotlighted largest <video>) and hides it.
+// "Am I presenting?" is answered by two cooperating, local-only signals:
+//   - src/share-hook.js (MAIN world) patches getDisplayMedia and fires a
+//     start/stop CustomEvent — a precise transition signal, but only for shares
+//     that begin after the page loads.
+//   - the local "Stop presentation" control, found in the DOM by its
+//     language-independent Material Symbol ligature (cancel_presentation) — a
+//     state signal that is true the instant we look, so it also covers rejoining
+//     a call while a share is already live.
+// Both are local-only: getDisplayMedia runs in the sharer's browser, and the
+// stop-present control exists only for the local presenter — so someone else
+// presenting can never engage the extension. The DOM is the source of truth;
+// the getDisplayMedia event is an accelerant that makes the transition snappier.
 
 const HIDDEN_CLASS = "gmeet-unmirror-hidden"
 const PLACEHOLDER_CLASS = "gmeet-unmirror-placeholder"
-const BUTTON_VISIBLE_CLASS = "gmeet-unmirror-visible"
 const POSITION_PATCHED_ATTR = "data-gmeet-unmirror-position-patched"
 const STYLE_ID = "gmeet-unmirror-styles"
-const TOGGLE_BUTTON_ID = "gmeet-unmirror-toggle"
 const SHARE_EVENT = "gmeet-unmirror:share"
+const STORAGE_KEY = "auto"
 
 const MAX_ANCESTOR_HOPS = 6
 const CONTAINER_AREA_GROWTH_LIMIT = 1.6
-const RETRY_DEBOUNCE_MS = 300
+const RECONCILE_DEBOUNCE_MS = 300
 
 // Meet wraps every tile — camera or presentation — in an element carrying a
 // stable data-tile-media-id (confirmed against a live call). Its class names are
 // randomised per build, but this attribute is semantic and survives rebuilds.
 const TILE_SELECTOR = "[data-tile-media-id]"
+
+// The local "Stop presentation" control carries this Material Symbol ligature in
+// its text. The glyph name is language-independent (unlike the aria-label prose)
+// and only present while THIS user is presenting.
+const PRESENT_STOP_LIGATURE = "cancel_presentation"
+
+// Self-view camera tiles carry their own controls (Reframe, Backgrounds) — the
+// presentation tile never does. Confirmed against a live call. Excluding any
+// tile with these ligatures guarantees the self-view is never chosen as the
+// presentation, even in the split-second before the presentation tile mounts.
+const SELF_VIEW_LIGATURES = ["frame_person", "visual_effects"]
 
 const debounce = (fn, waitMs) => {
   let timeoutId
@@ -53,13 +68,20 @@ const findLargestVideo = (videos) =>
     videoArea(video) > videoArea(largest) ? video : largest,
   )
 
+const isSelfViewVideo = (video) => {
+  const tile = video.closest(TILE_SELECTOR)
+  const text = tile?.textContent ?? ""
+  return SELF_VIEW_LIGATURES.some((ligature) => text.includes(ligature))
+}
+
 // While sharing, the presentation is Meet's spotlighted main stage, so it's the
-// largest visible <video>. This is only ever called during an active share (see
-// the share gate below), which is what keeps it off camera tiles.
+// largest visible <video> — once the self-view is excluded. Returns null until a
+// non-self-view video exists, which is how we avoid hiding our own face during
+// the moment before the presentation tile mounts.
 const findPresentationVideo = () => {
-  const videos = Array.from(document.querySelectorAll("video")).filter(
-    isVisible,
-  )
+  const videos = Array.from(document.querySelectorAll("video"))
+    .filter(isVisible)
+    .filter((video) => !isSelfViewVideo(video))
   return videos.length ? findLargestVideo(videos) : null
 }
 
@@ -85,6 +107,15 @@ const findTileContainerByWalk = (video) => {
 const findTileContainer = (video) =>
   video.closest(TILE_SELECTOR) ?? findTileContainerByWalk(video)
 
+// Is THIS user presenting right now, per the DOM? True iff the local
+// "Stop presentation" control is on screen.
+const isPresentingByDom = () =>
+  Array.from(document.querySelectorAll("button")).some(
+    (button) =>
+      button.offsetParent !== null &&
+      button.textContent.includes(PRESENT_STOP_LIGATURE),
+  )
+
 const ensureRelativePositioning = (el) => {
   if (getComputedStyle(el).position === "static") {
     el.style.position = "relative"
@@ -106,8 +137,6 @@ const createPlaceholder = () => {
   return el
 }
 
-// Button and placeholder are styled to sit inside Meet's dark control aesthetic
-// (round, #202124-ish, Google Sans) rather than announce themselves.
 const injectStyles = () => {
   if (document.getElementById(STYLE_ID)) return
 
@@ -133,69 +162,34 @@ const injectStyles = () => {
       z-index: 2147483647;
       pointer-events: none;
     }
-
-    #${TOGGLE_BUTTON_ID} {
-      position: fixed;
-      left: 16px;
-      bottom: 24px;
-      z-index: 2147483647;
-      display: none;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      border: none;
-      border-radius: 24px;
-      background: rgba(32, 33, 36, 0.92);
-      color: #e8eaed;
-      font: 500 14px/1 "Google Sans", Roboto, system-ui, sans-serif;
-      cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    }
-
-    #${TOGGLE_BUTTON_ID}.${BUTTON_VISIBLE_CLASS} {
-      display: inline-flex;
-    }
-
-    #${TOGGLE_BUTTON_ID}:hover {
-      background: rgba(60, 64, 67, 0.95);
-    }
   `
   document.head.appendChild(style)
 }
 
-let isSharing = false
-let userWantsVisible = false
+let autoHide = true // popup setting; default on
+let isSharing = false // are we presenting right now?
+let hideRequested = false // effective intent: should the tile be hidden?
 let hiddenContainer = null
 let placeholderEl = null
-let toggleButtonEl = null
-let retryObserver = null
-
-const updateToggleButton = () => {
-  if (!toggleButtonEl) return
-  const isHidden = Boolean(hiddenContainer)
-  toggleButtonEl.setAttribute("aria-pressed", String(isHidden))
-  toggleButtonEl.textContent = isHidden
-    ? "Show presentation"
-    : "Hide presentation"
-}
 
 const showPresentationTile = () => {
   if (!hiddenContainer) return
-
   hiddenContainer.classList.remove(HIDDEN_CLASS)
   restorePositioning(hiddenContainer)
   placeholderEl?.remove()
   hiddenContainer = null
   placeholderEl = null
-  updateToggleButton()
 }
 
+// Hide the current presentation tile, re-targeting if the largest non-self-view
+// video has changed (Meet re-mounts the tile on layout changes, and the stage
+// settles onto the presentation a beat after a share starts).
 const hidePresentationTile = () => {
   const video = findPresentationVideo()
-  if (!video) return false
+  if (!video) return
 
   const container = findTileContainer(video)
-  if (hiddenContainer === container) return true
+  if (hiddenContainer === container && document.contains(container)) return
 
   showPresentationTile()
   ensureRelativePositioning(container)
@@ -203,45 +197,53 @@ const hidePresentationTile = () => {
   container.appendChild(createPlaceholder())
   hiddenContainer = container
   placeholderEl = container.querySelector(`.${PLACEHOLDER_CLASS}`)
-  updateToggleButton()
-  return true
 }
 
-// Re-assert the hide while sharing: the presentation tile mounts a beat after
-// the share starts, and Meet re-mounts it on layout changes (leaving our old
-// reference detached, which would let the mirror back in).
-const tryHide = () => {
-  if (!isSharing || userWantsVisible) return
-  if (hiddenContainer && document.contains(hiddenContainer)) return
-  if (hiddenContainer) showPresentationTile()
-  hidePresentationTile()
+// Bring the DOM in line with our intent. Safe to call on every mutation.
+const applyIntent = () => {
+  if (isSharing && hideRequested) hidePresentationTile()
+  else showPresentationTile()
 }
 
-// Manual toggle (button + shortcut) only means anything during a share. Showing
-// a tile the user explicitly asked to see wins until the share ends.
+const onShareStart = () => {
+  if (isSharing) return
+  isSharing = true
+  hideRequested = autoHide // auto → hide now; manual → wait for the popup
+  applyIntent()
+}
+
+const onShareStop = () => {
+  if (!isSharing) return
+  isSharing = false
+  hideRequested = false
+  applyIntent()
+}
+
+// The DOM is authoritative for whether we're presenting; reconcile our state
+// with it, then re-assert the hide (covers Meet re-mounting the tile).
+const reconcile = () => {
+  if (isPresentingByDom()) onShareStart()
+  else onShareStop()
+  applyIntent()
+}
+
+// Manual show/hide from the popup and the Alt+Shift+H shortcut. Only meaningful
+// while presenting; flips the intent and re-asserts it.
 const toggleManual = () => {
   if (!isSharing) return
-  if (hiddenContainer) {
-    userWantsVisible = true
-    showPresentationTile()
-  } else {
-    userWantsVisible = false
-    hidePresentationTile()
-  }
+  hideRequested = !hideRequested
+  applyIntent()
 }
 
-const showButton = (visible) => {
-  toggleButtonEl?.classList.toggle(BUTTON_VISIBLE_CLASS, visible)
-}
+const getState = () => ({
+  presenting: isSharing,
+  hidden: Boolean(hiddenContainer),
+  auto: autoHide,
+})
 
-const createToggleButton = () => {
-  const button = document.createElement("button")
-  button.id = TOGGLE_BUTTON_ID
-  button.type = "button"
-  button.title = "Hide/show the presentation tile (Alt+Shift+H)"
-  button.addEventListener("click", toggleManual)
-  document.body.appendChild(button)
-  return button
+const handleShareEvent = (event) => {
+  if (event.detail?.active) onShareStart()
+  else onShareStop()
 }
 
 const isEditableTarget = (target) =>
@@ -260,39 +262,46 @@ const handleKeydown = (event) => {
   }
 }
 
-// Share gate: engage only while THIS user is screen-sharing (the only time the
-// hall-of-mirrors exists). Announced by src/share-hook.js from the page's MAIN
-// world, where the real getDisplayMedia lives.
-const onShareStart = () => {
-  if (isSharing) return
-  isSharing = true
-  userWantsVisible = false
-  showButton(true)
-  tryHide()
-  retryObserver = new MutationObserver(debounce(tryHide, RETRY_DEBOUNCE_MS))
-  retryObserver.observe(document.body, { childList: true, subtree: true })
+const applyAutoSetting = (value) => {
+  autoHide = value !== false // default on when unset
+  // Toggling the setting mid-share takes effect immediately: on → hide, off →
+  // show. A subsequent manual toggle still wins until the setting changes again.
+  if (isSharing) {
+    hideRequested = autoHide
+    applyIntent()
+  }
 }
 
-const onShareStop = () => {
-  isSharing = false
-  userWantsVisible = false
-  retryObserver?.disconnect()
-  retryObserver = null
-  showPresentationTile()
-  showButton(false)
-}
-
-const handleShareEvent = (event) => {
-  if (event.detail?.active) onShareStart()
-  else onShareStop()
+const watchAutoSetting = async () => {
+  const stored = await browser.storage.local.get(STORAGE_KEY)
+  applyAutoSetting(stored[STORAGE_KEY])
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && STORAGE_KEY in changes) {
+      applyAutoSetting(changes[STORAGE_KEY].newValue)
+    }
+  })
 }
 
 const init = () => {
   injectStyles()
-  toggleButtonEl = createToggleButton()
-  updateToggleButton()
   document.addEventListener("keydown", handleKeydown)
   window.addEventListener(SHARE_EVENT, handleShareEvent)
+
+  // Popup ↔ content bridge: report state, and toggle on request.
+  browser.runtime.onMessage.addListener((message) => {
+    if (message?.type === "toggle") toggleManual()
+    return Promise.resolve(getState())
+  })
+
+  // Persistent, debounced reconciler: the DOM decides whether we're presenting
+  // and re-asserts the hide when Meet re-mounts the tile.
+  const observer = new MutationObserver(
+    debounce(reconcile, RECONCILE_DEBOUNCE_MS),
+  )
+  observer.observe(document.body, { childList: true, subtree: true })
+
+  watchAutoSetting()
+  reconcile() // catch "already presenting when the page loaded"
 }
 
 init()
