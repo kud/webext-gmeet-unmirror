@@ -25,6 +25,11 @@ const MAX_ANCESTOR_HOPS = 6
 const CONTAINER_AREA_GROWTH_LIMIT = 1.6
 const RETRY_DEBOUNCE_MS = 300
 
+// Meet wraps every tile — camera or presentation — in an element carrying a
+// stable data-tile-media-id (confirmed against a live call). Its class names are
+// randomised per build, but this attribute is semantic and survives rebuilds.
+const TILE_SELECTOR = "[data-tile-media-id]"
+
 const debounce = (fn, waitMs) => {
   let timeoutId
   return (...args) => {
@@ -58,10 +63,10 @@ const findPresentationVideo = () => {
   return videos.length ? findLargestVideo(videos) : null
 }
 
-// Walk up from the <video> to the tile container Meet lays out in its grid,
-// stopping as soon as an ancestor's box grows past the video's own — that jump
-// means we've stepped out of the tile into the surrounding stage.
-const findTileContainer = (video) => {
+// The tile container Meet lays out in its grid. Prefer the semantic attribute;
+// fall back to a geometric walk up the ancestors — stopping as soon as a box
+// grows past the video's own — for the day Meet drops or renames the attribute.
+const findTileContainerByWalk = (video) => {
   const baseArea = videoArea(video)
   let container = video
   let node = video.parentElement
@@ -76,6 +81,9 @@ const findTileContainer = (video) => {
 
   return container
 }
+
+const findTileContainer = (video) =>
+  video.closest(TILE_SELECTOR) ?? findTileContainerByWalk(video)
 
 const ensureRelativePositioning = (el) => {
   if (getComputedStyle(el).position === "static") {
