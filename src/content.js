@@ -1,41 +1,29 @@
-// gmeet-unmirror — hides the Google Meet presentation tile so that sharing
-// the whole screen doesn't feed it back into itself (the "hall of mirrors").
+// gmeet-unmirror — hides the Google Meet presentation tile so sharing the whole
+// screen doesn't feed it back into itself (the "hall of mirrors").
 //
-// CORRECTNESS BAR: only ever hide the presentation feed. Never the user's own
-// self-view thumbnail, never another participant's tile, never Meet's
-// controls/chat. Every heuristic below exists in service of that constraint.
+// CORRECTNESS BAR: only ever hide the presentation feed, and only while YOU are
+// actively screen-sharing. Never a camera tile, never your self-view, never
+// Meet's controls. The share gate is what guarantees it — the extension stays
+// inert unless a screen-share is live, so it structurally cannot grab a face
+// when nobody is presenting.
 //
-// Meet's class names are randomised per build, so nothing here is pinned to a
-// class name. Selection instead relies on:
-//   1. Largest visible <video> on the page — when someone is presenting, the
-//      presentation is the spotlighted main stage, so it's the largest video;
-//      self-view is a small thumbnail and other participants are smaller too.
-//   2. A backstop: an aria-label on the video or a nearby ancestor mentioning
-//      "presenting"/"presentation"/"screen share", if Meet exposes one.
-//
-// !!! DEV TODO — CONFIRM AGAINST A LIVE MEET CALL !!!
-// Heuristic 2 is a guess at what Meet *might* expose, not a confirmed signal.
-// Open a real call, start presenting, and inspect the presentation tile's
-// ancestors in devtools for a stable `aria-label` or `data-*` attribute. If
-// one exists, tighten `PRESENTATION_LABEL_PATTERN` / `findTileContainer`
-// below to use it directly instead of the largest-video fallback. Also worth
-// checking: does "speaker view" ever make a single participant's camera the
-// largest video with nobody presenting? If so, the label backstop needs to
-// become a hard requirement rather than a preference, or auto-hide (Mode 2)
-// needs a stricter trigger than "a big video appeared".
+// Two cooperating scripts:
+//   - src/share-hook.js (MAIN world) patches getDisplayMedia and announces share
+//     start/stop on a window CustomEvent.
+//   - this script (isolated world) listens for that, and only then finds the
+//     presentation tile (the spotlighted largest <video>) and hides it.
 
 const HIDDEN_CLASS = "gmeet-unmirror-hidden"
 const PLACEHOLDER_CLASS = "gmeet-unmirror-placeholder"
+const BUTTON_VISIBLE_CLASS = "gmeet-unmirror-visible"
 const POSITION_PATCHED_ATTR = "data-gmeet-unmirror-position-patched"
 const STYLE_ID = "gmeet-unmirror-styles"
 const TOGGLE_BUTTON_ID = "gmeet-unmirror-toggle"
+const SHARE_EVENT = "gmeet-unmirror:share"
 
 const MAX_ANCESTOR_HOPS = 6
 const CONTAINER_AREA_GROWTH_LIMIT = 1.6
-const AUTO_HIDE_MIN_VIEWPORT_RATIO = 0.25
-const MUTATION_DEBOUNCE_MS = 400
-
-const PRESENTATION_LABEL_PATTERN = /presenting|presentation|screen\s*share/i
+const RETRY_DEBOUNCE_MS = 300
 
 const debounce = (fn, waitMs) => {
   let timeoutId
@@ -60,26 +48,19 @@ const findLargestVideo = (videos) =>
     videoArea(video) > videoArea(largest) ? video : largest,
   )
 
-const findLabelledPresentationVideo = (videos) =>
-  videos.find((video) => {
-    const labelled = video.closest("[aria-label]")
-    const label = labelled?.getAttribute("aria-label") ?? ""
-    return PRESENTATION_LABEL_PATTERN.test(label)
-  })
-
-// The core lookup: which <video> on the page is the presentation feed, if any.
+// While sharing, the presentation is Meet's spotlighted main stage, so it's the
+// largest visible <video>. This is only ever called during an active share (see
+// the share gate below), which is what keeps it off camera tiles.
 const findPresentationVideo = () => {
   const videos = Array.from(document.querySelectorAll("video")).filter(
     isVisible,
   )
-  if (videos.length === 0) return null
-  return findLabelledPresentationVideo(videos) ?? findLargestVideo(videos)
+  return videos.length ? findLargestVideo(videos) : null
 }
 
 // Walk up from the <video> to the tile container Meet lays out in its grid,
-// stopping as soon as an ancestor's box is meaningfully bigger than the
-// video's own box — that jump means we've stepped out of the tile and into
-// the surrounding grid/stage, which must stay visible (it holds every tile).
+// stopping as soon as an ancestor's box grows past the video's own — that jump
+// means we've stepped out of the tile into the surrounding stage.
 const findTileContainer = (video) => {
   const baseArea = videoArea(video)
   let container = video
@@ -117,6 +98,8 @@ const createPlaceholder = () => {
   return el
 }
 
+// Button and placeholder are styled to sit inside Meet's dark control aesthetic
+// (round, #202124-ish, Google Sans) rather than announce themselves.
 const injectStyles = () => {
   if (document.getElementById(STYLE_ID)) return
 
@@ -136,8 +119,8 @@ const injectStyles = () => {
       justify-content: center;
       padding: 12px;
       background: rgba(15, 15, 15, 0.85);
-      color: #fff;
-      font: 500 14px/1.4 system-ui, sans-serif;
+      color: #e8eaed;
+      font: 500 14px/1.4 "Google Sans", Roboto, system-ui, sans-serif;
       text-align: center;
       z-index: 2147483647;
       pointer-events: none;
@@ -145,34 +128,39 @@ const injectStyles = () => {
 
     #${TOGGLE_BUTTON_ID} {
       position: fixed;
-      right: 16px;
-      bottom: 16px;
+      left: 16px;
+      bottom: 24px;
       z-index: 2147483647;
-      padding: 8px 14px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
       border: none;
-      border-radius: 999px;
-      background: #2b44c2;
-      color: #fff;
-      font: 600 13px/1 system-ui, sans-serif;
+      border-radius: 24px;
+      background: rgba(32, 33, 36, 0.92);
+      color: #e8eaed;
+      font: 500 14px/1 "Google Sans", Roboto, system-ui, sans-serif;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    #${TOGGLE_BUTTON_ID}.${BUTTON_VISIBLE_CLASS} {
+      display: inline-flex;
     }
 
     #${TOGGLE_BUTTON_ID}:hover {
-      background: #4a6cf7;
-    }
-
-    #${TOGGLE_BUTTON_ID}[aria-pressed="true"] {
-      background: #4a6cf7;
+      background: rgba(60, 64, 67, 0.95);
     }
   `
   document.head.appendChild(style)
 }
 
+let isSharing = false
+let userWantsVisible = false
 let hiddenContainer = null
 let placeholderEl = null
 let toggleButtonEl = null
-let userSuppressedAutoHide = false
+let retryObserver = null
 
 const updateToggleButton = () => {
   if (!toggleButtonEl) return
@@ -211,18 +199,31 @@ const hidePresentationTile = () => {
   return true
 }
 
-// Both manual triggers (button, shortcut) and auto-hide funnel through here.
-// A manual toggle always wins: showing a tile the user explicitly asked to
-// see stays shown until the current presentation ends, even if auto-hide
-// would otherwise want to re-hide it.
-const toggleHidden = ({ manual = false } = {}) => {
+// Re-assert the hide while sharing: the presentation tile mounts a beat after
+// the share starts, and Meet re-mounts it on layout changes (leaving our old
+// reference detached, which would let the mirror back in).
+const tryHide = () => {
+  if (!isSharing || userWantsVisible) return
+  if (hiddenContainer && document.contains(hiddenContainer)) return
+  if (hiddenContainer) showPresentationTile()
+  hidePresentationTile()
+}
+
+// Manual toggle (button + shortcut) only means anything during a share. Showing
+// a tile the user explicitly asked to see wins until the share ends.
+const toggleManual = () => {
+  if (!isSharing) return
   if (hiddenContainer) {
+    userWantsVisible = true
     showPresentationTile()
-    if (manual) userSuppressedAutoHide = true
   } else {
+    userWantsVisible = false
     hidePresentationTile()
-    if (manual) userSuppressedAutoHide = false
   }
+}
+
+const showButton = (visible) => {
+  toggleButtonEl?.classList.toggle(BUTTON_VISIBLE_CLASS, visible)
 }
 
 const createToggleButton = () => {
@@ -230,7 +231,7 @@ const createToggleButton = () => {
   button.id = TOGGLE_BUTTON_ID
   button.type = "button"
   button.title = "Hide/show the presentation tile (Alt+Shift+H)"
-  button.addEventListener("click", () => toggleHidden({ manual: true }))
+  button.addEventListener("click", toggleManual)
   document.body.appendChild(button)
   return button
 }
@@ -247,39 +248,35 @@ const handleKeydown = (event) => {
     !isEditableTarget(event.target)
   ) {
     event.preventDefault()
-    toggleHidden({ manual: true })
+    toggleManual()
   }
 }
 
-// Mode 2 — auto-hide. A MutationObserver is the simple, isolated-world-only
-// signal: it can't tell a screen-share apart from "someone's camera just got
-// spotlighted large", so it leans on a viewport-ratio threshold to only fire
-// when a tile is dominating the page (as a full presentation would). The
-// more reliable signal is hooking `navigator.mediaDevices.getDisplayMedia` in
-// the page's MAIN world (fires exactly when a share starts/stops) — adopt
-// that (via a `world: "MAIN"` content script) if this proves too eager or
-// too shy once tested against real calls.
-const looksLikePresentationActive = () => {
-  const video = findPresentationVideo()
-  if (!video) return false
-  const viewportArea = window.innerWidth * window.innerHeight
-  return videoArea(video) >= viewportArea * AUTO_HIDE_MIN_VIEWPORT_RATIO
+// Share gate: engage only while THIS user is screen-sharing (the only time the
+// hall-of-mirrors exists). Announced by src/share-hook.js from the page's MAIN
+// world, where the real getDisplayMedia lives.
+const onShareStart = () => {
+  if (isSharing) return
+  isSharing = true
+  userWantsVisible = false
+  showButton(true)
+  tryHide()
+  retryObserver = new MutationObserver(debounce(tryHide, RETRY_DEBOUNCE_MS))
+  retryObserver.observe(document.body, { childList: true, subtree: true })
 }
 
-const maybeAutoHide = () => {
-  if (!looksLikePresentationActive()) {
-    userSuppressedAutoHide = false
-    return
-  }
-  if (userSuppressedAutoHide) return
-  hidePresentationTile()
+const onShareStop = () => {
+  isSharing = false
+  userWantsVisible = false
+  retryObserver?.disconnect()
+  retryObserver = null
+  showPresentationTile()
+  showButton(false)
 }
 
-const observeDomChanges = () => {
-  const observer = new MutationObserver(
-    debounce(maybeAutoHide, MUTATION_DEBOUNCE_MS),
-  )
-  observer.observe(document.body, { childList: true, subtree: true })
+const handleShareEvent = (event) => {
+  if (event.detail?.active) onShareStart()
+  else onShareStop()
 }
 
 const init = () => {
@@ -287,7 +284,7 @@ const init = () => {
   toggleButtonEl = createToggleButton()
   updateToggleButton()
   document.addEventListener("keydown", handleKeydown)
-  observeDomChanges()
+  window.addEventListener(SHARE_EVENT, handleShareEvent)
 }
 
 init()
