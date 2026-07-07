@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "gmeet-unmirror",
+  "name": "Gmeet Unmirror",
   "description": "Hides the Google Meet presentation tile so full-screen sharing doesn't produce an infinite hall of mirrors.",
   "version": "1.0.0",
   "browser_specific_settings": {
@@ -16,7 +16,7 @@
   "host_permissions": ["*://meet.google.com/*"],
   "action": {
     "default_popup": "src/popup.html",
-    "default_title": "gmeet-unmirror"
+    "default_title": "Gmeet Unmirror"
   },
   "content_scripts": [
     {

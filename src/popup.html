@@ -3,148 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>gmeet-unmirror</title>
-    <style>
-      :root {
-        color-scheme: dark;
-        font-family: "Google Sans", Roboto, system-ui, sans-serif;
-      }
-
-      body {
-        margin: 0;
-        width: 260px;
-        padding: 16px;
-        background: #202124;
-        color: #e8eaed;
-      }
-
-      header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-      }
-
-      .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #5f6368;
-        flex: none;
-      }
-
-      .dot[data-tone="live"] {
-        background: #34a853;
-      }
-
-      .dot[data-tone="hidden"] {
-        background: #8ab4f8;
-      }
-
-      h1 {
-        margin: 0;
-        font-size: 14px;
-        font-weight: 500;
-      }
-
-      .status {
-        margin: 0 0 14px;
-        font-size: 13px;
-        color: #9aa0a6;
-      }
-
-      .row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 14px;
-        font-size: 14px;
-      }
-
-      /* Compact switch */
-      .switch {
-        position: relative;
-        width: 40px;
-        height: 22px;
-        flex: none;
-      }
-
-      .switch input {
-        position: absolute;
-        opacity: 0;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        cursor: pointer;
-      }
-
-      .track {
-        position: absolute;
-        inset: 0;
-        border-radius: 999px;
-        background: #5f6368;
-        transition: background 150ms ease;
-      }
-
-      .track::after {
-        content: "";
-        position: absolute;
-        top: 3px;
-        left: 3px;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: #e8eaed;
-        transition: transform 150ms ease;
-      }
-
-      .switch input:checked + .track {
-        background: #8ab4f8;
-      }
-
-      .switch input:checked + .track::after {
-        transform: translateX(18px);
-        background: #202124;
-      }
-
-      .btn {
-        width: 100%;
-        padding: 10px 14px;
-        border: none;
-        border-radius: 8px;
-        background: #8ab4f8;
-        color: #202124;
-        font:
-          500 14px/1 "Google Sans",
-          Roboto,
-          system-ui,
-          sans-serif;
-        cursor: pointer;
-        transition: background 150ms ease;
-      }
-
-      .btn:hover:not(:disabled) {
-        background: #aecbfa;
-      }
-
-      .btn:disabled {
-        background: #3c4043;
-        color: #80868b;
-        cursor: default;
-      }
-
-      .hint {
-        margin: 12px 0 0;
-        font-size: 12px;
-        color: #80868b;
-        text-align: center;
-      }
-    </style>
+    <meta name="color-scheme" content="light dark" />
+    <title>Gmeet Unmirror</title>
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header>
       <span class="dot" id="dot"></span>
-      <h1>gmeet-unmirror</h1>
+      <h1>Gmeet Unmirror</h1>
     </header>
 
     <p class="status" id="status">Checking…</p>
@@ -153,7 +19,7 @@
       <span>Hide automatically</span>
       <span class="switch">
         <input type="checkbox" id="auto" />
-        <span class="track"></span>
+        <span class="track"><span class="thumb"></span></span>
       </span>
     </label>
 
