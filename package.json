@@ -22,6 +22,6 @@
     "mz:hub": "open 'https://addons.mozilla.org/developers/'"
   },
   "devDependencies": {
-    "web-ext": "10.4.0"
+    "web-ext": "10.6.0"
   }
 }
