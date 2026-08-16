@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>Gmeet Unmirror</title>
+    <link rel="stylesheet" href="vendor/tokens.css" />
+    <link rel="stylesheet" href="vendor/webext-ui.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
-  <body>
-    <header>
+  <body class="popup stack">
+    <header class="cluster">
       <span class="dot" id="dot"></span>
       <h1>Gmeet Unmirror</h1>
     </header>
@@ -23,7 +25,9 @@
       </span>
     </label>
 
-    <button class="btn" id="toggle" disabled>Show / hide presentation</button>
+    <button class="btn btn-primary btn-block" id="toggle" disabled>
+      Show / hide presentation
+    </button>
 
     <p class="hint">Only active while you're presenting.</p>
 

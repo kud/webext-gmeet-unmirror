@@ -44,7 +44,12 @@ const render = (state) => {
     return
   }
 
-  dotEl.dataset.tone = state.hidden ? "hidden" : "live"
+  // The dot's three states have to differ in shape, not hue — at 10px, three
+  // filled dots in three colours are one dot to a colourblind reader. The
+  // design system supplies the shapes (thin ring / thick ring / solid) and
+  // this maps our domain onto them: solid once the mirror is actually hidden,
+  // which is the thing the extension exists to do.
+  dotEl.dataset.tone = state.hidden ? "on" : "ready"
   statusEl.textContent = state.hidden
     ? "Presenting — mirror hidden"
     : "Presenting — mirror visible"

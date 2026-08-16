@@ -1,0 +1,105 @@
+/* @kud/webext-ui — tokens.css v0.1.0
+ *
+ * Vendored file. Do not edit here — edit it upstream and re-run
+ * `npx @kud/webext-ui@latest sync src/vendor/`. Grep the version above
+ * across the fleet to find stale copies.
+ *
+ * Every colour pair below is contrast-checked. The figures in comments are
+ * computed WCAG 2.1 ratios, not estimates.
+ *
+ * An extension overrides --accent and --accent-fg (together, always) in its
+ * own stylesheet. Everything else is the shared scale and should not be
+ * overridden without a reason worth writing down.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces and text. These seven values were already identical, byte for
+     byte, in four extensions — they are recorded here rather than chosen. */
+  --bg: #ffffff;
+  --fg: #1c1b22;
+  --muted: #5b5b66; /* 6.70:1 on --bg — the lightest colour text may use */
+  --faint: #8f8f9d; /* 3.19:1 on --bg — NON-TEXT ONLY: icons, dividers, disabled */
+  --hover: #f5f5f7;
+  --border: #ededf0; /* 1.17:1 on --bg — a divider, never a control edge */
+  --border-control: #8f8f9d; /* 3.19:1 on --bg — meets WCAG 1.4.11 for control edges */
+
+  /* Product identity. Override this pair per extension; the default is the
+     orange shared by foxhop and smoothgpt. --accent-fg is whatever reaches
+     4.5:1 on --accent, which is dark for orange and white for a dark accent. */
+  --accent: #f0560e;
+  --accent-fg: #1c1b22; /* 4.92:1 on --accent. White would be 3.48:1 and fail. */
+
+  /* Feedback. Both greens found in the fleet (#1e8e3e 4.21:1, #27ae60 2.87:1)
+     fail AA as text, so --success is introduced rather than derived. */
+  --success: #017a40; /* 5.44:1 on --bg */
+  --danger: #d70022; /* 5.37:1 on --bg */
+
+  /* Focus. No precedent existed anywhere in the fleet; this is invented.
+     The ring is the accent, offset so it clears an accent-filled control and
+     lands on --bg. Verified >=3:1 on --bg for all four extension accents in
+     both themes, which is what WCAG 1.4.11 asks of a focus indicator. */
+  --focus-ring: var(--accent);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* Spacing, 4px base. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Type. Base is 14px: the compact popups set 13px and then overrode it with
+     an explicit 14px on .row, .btn and h1, losing three times per file. */
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-lg: 15px;
+  --line-tight: 1.2;
+  --line-base: 1.4;
+  --line-loose: 1.6;
+
+  /* Radii. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+
+  /* Sizing. --control-height fell out of the arithmetic rather than being
+     picked: an input at 8px/12px with 14px/1.4 text and a 1px border computes
+     to 37.6px, a button at 8px/16px lands in the same place, and the toggle
+     track was already 38px wide. */
+  --control-height: 38px;
+  --popup-narrow: 260px;
+  --popup-wide: 360px;
+
+  /* Motion. */
+  --dur-fast: 150ms;
+  --dur-slow: 300ms;
+  --ease: ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1b22;
+    --fg: #fbfbfe;
+    --muted: #b1b1bd; /* 8.05:1 on --bg */
+    --faint: #8f8f9d; /* 5.36:1 — still non-text only, for consistency of meaning */
+    --hover: #2b2a33;
+    --border: #2b2a33;
+    --border-control: #8f8f9d; /* 5.36:1 on --bg */
+
+    --accent: #ff9a3d;
+    --accent-fg: #1c1b22; /* 8.09:1 on --accent */
+
+    --success: #81c995; /* 8.72:1 on --bg */
+    --danger: #ff6b6b; /* 6.16:1 on --bg */
+  }
+}
