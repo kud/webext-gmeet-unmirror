@@ -27,7 +27,7 @@
     },
     {
       "matches": ["*://meet.google.com/*"],
-      "js": ["src/content.js"],
+      "js": ["src/vendor/webext.js", "src/settings.js", "src/content.js"],
       "run_at": "document_idle"
     }
   ],

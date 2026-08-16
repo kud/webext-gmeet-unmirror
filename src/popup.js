@@ -2,28 +2,17 @@
 // (persisted in storage; the content script reacts to it live) and a manual
 // show/hide button that messages the active Meet tab's content script.
 
-const STORAGE_KEY = "auto"
-
 const dotEl = document.getElementById("dot")
 const statusEl = document.getElementById("status")
 const autoEl = document.getElementById("auto")
 const toggleEl = document.getElementById("toggle")
 
-const activeMeetTab = async () => {
-  const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
-  return tab?.url?.includes("meet.google.com") ? tab : null
-}
-
-// Ask the content script for the live state, tolerating a tab where it isn't
-// running (non-Meet tab, or Meet not finished loading).
-const fetchState = async (tab, message = { type: "getState" }) => {
-  if (!tab) return null
-  try {
-    return await browser.tabs.sendMessage(tab.id, message)
-  } catch {
-    return null
-  }
-}
+// Ask the content script for the live state. No receiver resolves undefined,
+// which render() already treats as "no Meet tab" — and that covers both cases
+// the old URL check and try/catch covered separately: a non-Meet tab has no
+// content script, and neither does a Meet tab that hasn't finished loading.
+const fetchState = (message = { type: "getState" }) =>
+  webext.sendToActiveTab(message)
 
 const render = (state) => {
   if (!state) {
@@ -60,19 +49,17 @@ const render = (state) => {
 }
 
 autoEl.addEventListener("change", async () => {
-  await browser.storage.local.set({ [STORAGE_KEY]: autoEl.checked })
-  render(await fetchState(await activeMeetTab()))
+  await settings.set({ auto: autoEl.checked })
+  render(await fetchState())
 })
 
 toggleEl.addEventListener("click", async () => {
-  const tab = await activeMeetTab()
-  render(await fetchState(tab, { type: "toggle" }))
+  render(await fetchState({ type: "toggle" }))
 })
 
 const load = async () => {
-  const stored = await browser.storage.local.get(STORAGE_KEY)
-  autoEl.checked = stored[STORAGE_KEY] !== false // default on
-  render(await fetchState(await activeMeetTab()))
+  autoEl.checked = (await settings.get()).auto
+  render(await fetchState())
 }
 
 load()

@@ -23,7 +23,6 @@ const PLACEHOLDER_CLASS = "gmeet-unmirror-placeholder"
 const POSITION_PATCHED_ATTR = "data-gmeet-unmirror-position-patched"
 const STYLE_ID = "gmeet-unmirror-styles"
 const SHARE_EVENT = "gmeet-unmirror:share"
-const STORAGE_KEY = "auto"
 
 const MAX_ANCESTOR_HOPS = 6
 const CONTAINER_AREA_GROWTH_LIMIT = 1.6
@@ -263,7 +262,7 @@ const handleKeydown = (event) => {
 }
 
 const applyAutoSetting = (value) => {
-  autoHide = value !== false // default on when unset
+  autoHide = value
   // Toggling the setting mid-share takes effect immediately: on → hide, off →
   // show. A subsequent manual toggle still wins until the setting changes again.
   if (isSharing) {
@@ -273,13 +272,8 @@ const applyAutoSetting = (value) => {
 }
 
 const watchAutoSetting = async () => {
-  const stored = await browser.storage.local.get(STORAGE_KEY)
-  applyAutoSetting(stored[STORAGE_KEY])
-  browser.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && STORAGE_KEY in changes) {
-      applyAutoSetting(changes[STORAGE_KEY].newValue)
-    }
-  })
+  applyAutoSetting((await settings.get()).auto)
+  settings.onChange(({ auto }) => applyAutoSetting(auto))
 }
 
 const init = () => {
