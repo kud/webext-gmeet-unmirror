@@ -1,0 +1,4 @@
+# Vendored builds of @kud/webext and @kud/webext-ui, re-synced by copy. Formatting
+# them breaks byte-parity with the published artifact, which is what makes a stale
+# copy detectable by diff rather than by guesswork.
+src/vendor/

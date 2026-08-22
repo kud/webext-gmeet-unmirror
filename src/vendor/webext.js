@@ -1,6 +1,8 @@
 var webext = (function (exports) {
   'use strict';
 
+  // @kud/webext@0.2.0 — vendored build, do not edit by hand.
+
   // src/api.ts
   var resolveApi = () => {
     const scope = globalThis;
@@ -28,8 +30,15 @@ var webext = (function (exports) {
   });
 
   // src/settings.ts
+  var deepFreeze = (value) => {
+    if (!value || typeof value !== "object" || Object.isFrozen(value))
+      return value;
+    Object.values(value).forEach(deepFreeze);
+    return Object.freeze(value);
+  };
   var defineSettings = (defaults, options = {}) => {
     const area = options.area ?? "sync";
+    deepFreeze(defaults);
     const keys = Object.keys(defaults);
     const store = () => api.storage[area];
     const get = async () => {
@@ -60,7 +69,7 @@ var webext = (function (exports) {
       api.storage.onChanged.addListener(handler);
       return () => api.storage.onChanged.removeListener(handler);
     };
-    return { get, set, onChange };
+    return { defaults, get, set, onChange };
   };
 
   // src/messaging.ts
@@ -77,6 +86,7 @@ var webext = (function (exports) {
 
   exports.api = api;
   exports.defineSettings = defineSettings;
+  exports.invoke = invoke;
   exports.sendToActiveTab = sendToActiveTab;
 
   return exports;
