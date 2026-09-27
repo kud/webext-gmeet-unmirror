@@ -1,4 +1,4 @@
-/* @kud/webext-ui — webext-ui.css v0.1.0
+/* @kud/webext-ui — webext-ui.css v0.2.0
  *
  * Vendored file. Do not edit here — edit it upstream and re-run
  * `npx @kud/webext-ui@latest sync src/vendor/`.
@@ -262,6 +262,16 @@ body {
   background: var(--hover);
 }
 
+button.row-bleed {
+  cursor: pointer;
+}
+
+/* Inset, because a full-width row touches the popup edge and an outset ring
+   loses its left and right sides outside the viewport. */
+.row-bleed:focus-visible {
+  outline-offset: calc(var(--focus-ring-width) * -1);
+}
+
 /* The primary action of a row, when the row also carries secondary buttons.
    A bare <li> with a click listener is unreachable by Tab; this is a real
    button, so it is not. */
@@ -365,9 +375,17 @@ body {
   color: var(--accent-fg);
 }
 
+/* Hover mixes the fill away from --accent-fg, so the pair only ever gains
+   contrast. brightness(1.08) took white-on-blue from 4.51 to 3.94:1, and on
+   a near-black accent it moved nothing you could see. */
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent);
-  filter: brightness(1.08);
+  --accent-hover: color-mix(
+    in oklab,
+    var(--accent) 86%,
+    rgb(from var(--accent-fg) calc(255 - r) calc(255 - g) calc(255 - b))
+  );
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
 }
 
 .btn-primary:disabled {
@@ -429,9 +447,20 @@ body {
 
 /* :user-invalid, not :invalid — :invalid matches an empty required field
    before it has ever been touched, so a first-time user is greeted by a
-   red form they have not filled in yet. */
-:where(input, select, textarea):user-invalid {
+   red form they have not filled in yet.
+   The edge also doubles in weight: grey to red alone measured 1.15:1 between
+   the two states in dark mode, which is one state to a colourblind reader.
+   .is-invalid is the same state set from script. .field-error carries the
+   words, which is the part that does not depend on seeing the edge at all. */
+:where(input, select, textarea):user-invalid,
+:where(input, select, textarea).is-invalid {
   border-color: var(--danger);
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.field-error {
+  font-size: var(--text-sm);
+  color: var(--danger);
 }
 
 /* A label stacked above its control. */
@@ -512,8 +541,12 @@ body {
   height: 16px;
   border-radius: var(--radius-pill);
   background: #fff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-  transition: transform var(--dur-fast) var(--ease);
+  box-shadow:
+    0 0 0 1px var(--border-control),
+    0 1px 2px rgb(0 0 0 / 0.3);
+  transition:
+    transform var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
 }
 
 .switch input:checked + .track {
@@ -521,8 +554,12 @@ body {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
+/* The thumb takes --accent-fg, the colour already proven against the accent.
+   A white thumb measured 1.31:1 on a light accent in dark mode. */
 .switch input:checked + .track .thumb {
   transform: translateX(16px);
+  background: var(--accent-fg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
 }
 
 /* The input is visually hidden but still focusable, so the ring has to be

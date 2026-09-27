@@ -5,18 +5,6 @@
  * Re-sync with: npx @kud/webext-ui@latest sync src/vendor/
  */
 
-:root {
-  --accent: #1a73e8;
-  --accent-fg: #ffffff; /* 4.51:1 on --accent */
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --accent: #8ab4f8;
-    --accent-fg: #1c1b22; /* 8.11:1 on --accent */
-  }
-}
-
 .hint {
   text-align: center;
 }

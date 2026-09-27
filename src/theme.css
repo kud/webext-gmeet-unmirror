@@ -1,0 +1,18 @@
+/* Gmeet Unmirror — identity.
+ *
+ * The extension's accent pair, and nothing else. Linked after the vendored
+ * @kud/webext-ui files on every page, so a new page cannot fall back to the
+ * default orange by forgetting it.
+ */
+
+:root {
+  --accent: #1a73e8;
+  --accent-fg: #ffffff; /* 4.51:1 on --accent */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #8ab4f8;
+    --accent-fg: #1c1b22; /* 8.11:1 on --accent */
+  }
+}
