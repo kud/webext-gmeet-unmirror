@@ -1,3 +1,10 @@
+import { sendToActiveTab } from "@kud/webext"
+import "@kud/webext-ui/tokens.css"
+import "@kud/webext-ui/webext-ui.css"
+import "../../assets/theme.css"
+import "./popup.css"
+import { settings } from "../../utils/settings"
+
 // gmeet-unmirror — popup. The single control surface: an "automatic" toggle
 // (persisted in storage; the content script reacts to it live) and a manual
 // show/hide button that messages the active Meet tab's content script.
@@ -12,7 +19,7 @@ const toggleEl = document.getElementById("toggle")
 // the old URL check and try/catch covered separately: a non-Meet tab has no
 // content script, and neither does a Meet tab that hasn't finished loading.
 const fetchState = (message = { type: "getState" }) =>
-  webext.sendToActiveTab(message)
+  sendToActiveTab(message)
 
 const render = (state) => {
   if (!state) {

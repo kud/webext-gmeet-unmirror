@@ -9,11 +9,12 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "→ Building the extension package…"
-npm run build
+echo "→ Building the extension package and its AMO sources zip…"
+npm run zip
 
-ARTIFACT_DIR="$(pwd)/web-ext-artifacts"
+ARTIFACT_DIR="$(pwd)/.output"
 echo "→ Opening the AMO Developer Hub."
-echo "  Upload the package from: $ARTIFACT_DIR"
+echo "  Upload the extension zip from: $ARTIFACT_DIR"
+echo "  When AMO asks for source code, upload the -sources.zip from the same folder."
 open "https://addons.mozilla.org/en-US/developers/addon/submit/upload-listed"
 open "$ARTIFACT_DIR" 2>/dev/null || true

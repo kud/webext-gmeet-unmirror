@@ -3,3 +3,5 @@ web-ext-artifacts/
 .env*
 *.log
 .amo-upload-uuid
+.output/
+.wxt/

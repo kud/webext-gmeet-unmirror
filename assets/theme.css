@@ -1,7 +1,7 @@
 /* Gmeet Unmirror — identity.
  *
- * The extension's accent pair, and nothing else. Linked after the vendored
- * @kud/webext-ui files on every page, so a new page cannot fall back to the
+ * The extension's accent pair, and nothing else. Imported after the
+ * @kud/webext-ui stylesheets by every page, so a new page cannot fall back to the
  * default orange by forgetting it.
  */
 

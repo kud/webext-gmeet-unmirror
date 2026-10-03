@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="src/icons/icon.svg" width="128" alt="Gmeet Unmirror icon" />
+<img src="public/icons/icon.svg" width="128" alt="Gmeet Unmirror icon" />
 
 ![Firefox](https://img.shields.io/badge/Firefox-FF7139?style=flat-square&logo=firefoxbrowser&logoColor=white)
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-4a6cf7?style=flat-square)
@@ -38,7 +38,7 @@ npm install
 npm run build
 ```
 
-Load it in Firefox: `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → select `manifest.json` (or the built package in `web-ext-artifacts/`). Temporary add-ons are dropped on restart and must be reloaded after every change.
+Load it in Firefox: `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → select `.output/firefox-mv3/manifest.json`. Temporary add-ons are dropped on restart and must be reloaded after every change.
 
 ## Usage
 
@@ -59,13 +59,14 @@ npm install
 npm run dev
 ```
 
-`npm run dev` runs `web-ext run --firefox=nightly`, launching Firefox Nightly with the extension already loaded and reloaded on every save.
+`npm run dev` runs `wxt -b firefox`, launching Firefox with the extension already loaded and reloaded on every save.
 
 Other scripts:
 
 ```sh
-npm run lint    # web-ext lint
-npm run build   # bundle into web-ext-artifacts/
+npm run build   # build into .output/firefox-mv3
+npm run lint    # web-ext lint on the build output (run after build)
+npm run zip     # extension zip + AMO sources zip in .output/
 ```
 
 Requires Firefox 142.0 or later (`strict_min_version`), since the content scripts rely on `world: "MAIN"`.

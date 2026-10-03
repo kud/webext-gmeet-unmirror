@@ -1,0 +1,10 @@
+/* Gmeet Unmirror — popup identity.
+ *
+ * Everything shared comes from the @kud/webext-ui npm package, imported by
+ * main.js ahead of this file. Only what is specific to this extension belongs
+ * here.
+ */
+
+.hint {
+  text-align: center;
+}

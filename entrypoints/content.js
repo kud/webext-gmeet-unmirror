@@ -1,3 +1,6 @@
+import { defineContentScript } from "wxt/utils/define-content-script"
+import { settings } from "../utils/settings"
+
 // gmeet-unmirror — hides the Google Meet presentation tile so sharing the whole
 // screen doesn't feed it back into itself (the "hall of mirrors").
 //
@@ -6,8 +9,8 @@
 // Meet's controls.
 //
 // "Am I presenting?" is answered by two cooperating, local-only signals:
-//   - src/share-hook.js (MAIN world) patches getDisplayMedia and fires a
-//     start/stop CustomEvent — a precise transition signal, but only for shares
+//   - entrypoints/share-hook.content.js (MAIN world) patches getDisplayMedia
+//     and fires a start/stop CustomEvent — a precise transition signal, but only for shares
 //     that begin after the page loads.
 //   - the local "Stop presentation" control, found in the DOM by its
 //     language-independent Material Symbol ligature (cancel_presentation) — a
@@ -298,4 +301,8 @@ const init = () => {
   reconcile() // catch "already presenting when the page loaded"
 }
 
-init()
+export default defineContentScript({
+  matches: ["*://meet.google.com/*"],
+  runAt: "document_idle",
+  main: init,
+})

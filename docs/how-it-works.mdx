@@ -26,4 +26,4 @@ The extension hides content by adding `visibility: hidden` to the tile container
 
 ## Permissions and footprint
 
-gmeet-unmirror requests a single host permission, `*://meet.google.com/*`, and nothing else. There's no background worker and no network requests — the entire extension is one content script (`src/content.js`) injected at `document_idle` into the Meet tab, and it only ever reads and modifies the DOM of that tab.
+gmeet-unmirror requests a single host permission, `*://meet.google.com/*`, and nothing else. There's no background worker and no network requests — the entire extension is one content script (`entrypoints/content.js`) injected at `document_idle` into the Meet tab, and it only ever reads and modifies the DOM of that tab.

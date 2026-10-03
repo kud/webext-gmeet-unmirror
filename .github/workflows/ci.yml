@@ -19,8 +19,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
       - name: Build
         run: npm run build
+
+      # Lints the built extension in .output/firefox-mv3, so it runs after build.
+      - name: Lint
+        run: npm run lint

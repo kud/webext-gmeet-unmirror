@@ -7,21 +7,27 @@
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "web-ext run --firefox=nightly",
-    "build": "rm -rf web-ext-artifacts/* 2>/dev/null || true && web-ext build --source-dir=. --artifacts-dir=web-ext-artifacts --ignore-files=publish.sh",
-    "lint": "web-ext lint --ignore-files=publish.sh",
-    "version": "sed -E -i 's/^(\\s*\"version\":\\s*)\"[^\"]*\"/\\1\"'\"$npm_package_version\"'\"/' manifest.json && git add manifest.json",
-    "sign:listed": "WEB_EXT_API_KEY=$MOZILLA_ADDONS_JWT_ISSUER WEB_EXT_API_SECRET=$MOZILLA_ADDONS_JWT_SECRET web-ext sign --channel=listed --upload-source-code --ignore-files=publish.sh",
-    "sign:self": "WEB_EXT_API_KEY=$MOZILLA_ADDONS_JWT_ISSUER WEB_EXT_API_SECRET=$MOZILLA_ADDONS_JWT_SECRET web-ext sign --channel=unlisted --ignore-files=publish.sh",
+    "dev": "wxt -b firefox",
+    "build": "wxt build -b firefox",
+    "zip": "wxt zip -b firefox",
+    "postinstall": "wxt prepare",
+    "lint": "web-ext lint --source-dir .output/firefox-mv3 --no-config-discovery",
+    "sign:listed": "WEB_EXT_API_KEY=$MOZILLA_ADDONS_JWT_ISSUER WEB_EXT_API_SECRET=$MOZILLA_ADDONS_JWT_SECRET web-ext sign --channel=listed --source-dir .output/firefox-mv3 --upload-source-code .output/${npm_package_name}-${npm_package_version}-sources.zip",
+    "sign:self": "WEB_EXT_API_KEY=$MOZILLA_ADDONS_JWT_ISSUER WEB_EXT_API_SECRET=$MOZILLA_ADDONS_JWT_SECRET web-ext sign --channel=unlisted --source-dir .output/firefox-mv3",
     "publish": "bash publish.sh",
     "mz:browse": "open 'https://addons.mozilla.org/developers/addon/gmeet-unmirror@kud.io/'",
     "mz:listing": "open 'https://addons.mozilla.org/firefox/addon/gmeet-unmirror/'",
     "mz:hub": "open 'https://addons.mozilla.org/developers/'"
   },
+  "dependencies": {
+    "@kud/webext": "0.2.0",
+    "@kud/webext-ui": "0.3.0"
+  },
   "devDependencies": {
-    "web-ext": "10.6.0"
+    "web-ext": "10.7.0",
+    "wxt": "0.21.4"
   }
 }
