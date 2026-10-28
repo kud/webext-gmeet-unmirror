@@ -1,0 +1,24 @@
+name: Dependabot auto-merge
+
+# Patch and minor bumps merge themselves once the required CI check passes;
+# majors stay open for a manual look.
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@v3
+      - if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --squash --subject "🏗️ $TITLE (#$NUMBER)" "$URL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ github.event.pull_request.title }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          URL: ${{ github.event.pull_request.html_url }}
