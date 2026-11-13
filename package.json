@@ -5,6 +5,7 @@
   "private": true,
   "author": "kud",
   "license": "MIT",
+  "homepage": "https://kud.io/projects/webext-gmeet-unmirror",
   "type": "module",
   "engines": {
     "node": ">=20"
